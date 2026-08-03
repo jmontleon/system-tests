@@ -59,6 +59,11 @@ var _ = Describe("SNR Functional - Master Remediation",
 		})
 
 		BeforeEach(func() {
+			By("Removing any stale kubelet stop guard from a previous run")
+
+			Expect(helpers.RemoveKubeletStopGuard(ctx, targetMasterName, snrparams.OcDebugTimeout)).To(Succeed(),
+				"Failed to remove kubelet stop guard on master %s", targetMasterName)
+
 			By("Verifying SNR operator deployment is ready")
 
 			snrDeployment, err := deployment.Pull(
@@ -95,6 +100,16 @@ var _ = Describe("SNR Functional - Master Remediation",
 						targetMasterName, snrparams.NodeReadyTimeout, err)
 					AddReportEntry("safety-net-recovery-failed",
 						fmt.Sprintf("master %s did not recover: %v", targetMasterName, err))
+				} else {
+					By("Removing kubelet stop guard file")
+
+					if guardErr := helpers.RemoveKubeletStopGuard(ctx, targetMasterName, snrparams.OcDebugTimeout); guardErr != nil {
+						GinkgoWriter.Printf(
+							"WARNING: failed to remove kubelet stop guard on master %s: %v\n",
+							targetMasterName, guardErr)
+						AddReportEntry("guard-cleanup-failed",
+							fmt.Sprintf("master %s: %v", targetMasterName, guardErr))
+					}
 				}
 			}
 
@@ -222,6 +237,11 @@ var _ = Describe("SNR Functional - Master Remediation",
 				GinkgoWriter.Printf("Pre-remediation boot IDs: master=%s, worker=%s\n",
 					oldMasterBootID, oldWorkerBootID)
 
+				By("Removing any stale kubelet stop guard on worker")
+
+				Expect(helpers.RemoveKubeletStopGuard(ctx, targetWorkerName, snrparams.OcDebugTimeout)).To(Succeed(),
+					"Failed to remove kubelet stop guard on worker %s", targetWorkerName)
+
 				By("Pre-cleaning any stale CRs from previous runs")
 
 				cleanupSNRCR(targetMasterName)
@@ -295,6 +315,16 @@ var _ = Describe("SNR Functional - Master Remediation",
 
 				GinkgoWriter.Printf("Both nodes rebooted and recovered: master=%s, worker=%s\n",
 					targetMasterName, targetWorkerName)
+
+				By("Removing kubelet stop guard on worker")
+
+				if guardErr := helpers.RemoveKubeletStopGuard(ctx, targetWorkerName, snrparams.OcDebugTimeout); guardErr != nil {
+					GinkgoWriter.Printf(
+						"WARNING: failed to remove kubelet stop guard on worker %s: %v\n",
+						targetWorkerName, guardErr)
+					AddReportEntry("guard-cleanup-failed",
+						fmt.Sprintf("worker %s: %v", targetWorkerName, guardErr))
+				}
 
 				By("Cleaning up NHC CRs")
 

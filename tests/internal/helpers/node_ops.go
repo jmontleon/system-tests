@@ -73,7 +73,9 @@ func StopKubelet(
 	ctx context.Context, nodeName string, timeout time.Duration,
 	logf func(string, ...interface{}),
 ) error {
-	_, err := RunOnNode(ctx, nodeName, timeout, "systemctl", "stop", "kubelet")
+	_, err := RunOnNode(ctx, nodeName, timeout,
+		"sh", "-c",
+		`g=/var/tmp/.medik8s-kubelet-stop-guard; [ -f "$g" ] && exit 0; touch "$g" && systemctl stop kubelet`)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "connection reset") ||
@@ -91,6 +93,17 @@ func StopKubelet(
 	}
 
 	return nil
+}
+
+// RemoveKubeletStopGuard removes the guard file left by StopKubelet so
+// that a subsequent StopKubelet call on the same node will take effect.
+func RemoveKubeletStopGuard(
+	ctx context.Context, nodeName string, timeout time.Duration,
+) error {
+	_, err := RunOnNode(ctx, nodeName, timeout,
+		"rm", "-f", "/var/tmp/.medik8s-kubelet-stop-guard")
+
+	return err
 }
 
 // StartKubelet attempts to start the kubelet service on the target node.

@@ -63,6 +63,11 @@ var _ = Describe("SNR Functional - Worker Remediation",
 		})
 
 		BeforeEach(func() {
+			By("Removing any stale kubelet stop guard from a previous run")
+
+			Expect(helpers.RemoveKubeletStopGuard(ctx, targetWorkerName, snrparams.OcDebugTimeout)).To(Succeed(),
+				"Failed to remove kubelet stop guard on node %s", targetWorkerName)
+
 			By("Verifying SNR operator deployment is ready")
 
 			snrDeployment, err := deployment.Pull(
@@ -124,6 +129,16 @@ var _ = Describe("SNR Functional - Worker Remediation",
 						targetWorkerName, snrparams.NodeReadyTimeout, err)
 					AddReportEntry("safety-net-recovery-failed",
 						fmt.Sprintf("node %s did not recover: %v", targetWorkerName, err))
+				} else {
+					By("Removing kubelet stop guard file")
+
+					if guardErr := helpers.RemoveKubeletStopGuard(ctx, targetWorkerName, snrparams.OcDebugTimeout); guardErr != nil {
+						GinkgoWriter.Printf(
+							"WARNING: failed to remove kubelet stop guard on node %s: %v\n",
+							targetWorkerName, guardErr)
+						AddReportEntry("guard-cleanup-failed",
+							fmt.Sprintf("node %s: %v", targetWorkerName, guardErr))
+					}
 				}
 			}
 

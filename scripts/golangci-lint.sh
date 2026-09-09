@@ -46,7 +46,7 @@ function DownloadGolangCiLint() {
 	versionNumber="${1}"
 
 	echo "installing golangci-lint version ${versionNumber}"
-	if curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v${versionNumber}; then
+	if curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/main/install.sh | sh -s -- -b $(go env GOPATH)/bin v${versionNumber}; then
 		return 0
 	fi
 

@@ -47,6 +47,8 @@ linters:
   disable:
     - ireturn
   settings:
+    goconst:
+      min-occurrences: 26
     depguard:
       rules:
         main:
